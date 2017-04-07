@@ -1,0 +1,371 @@
+#! /usr/bin/env python3
+
+"""
+numconverter, a simple numeric base converter
+Copyright (C) 2016-2017  B. Zolt'n Gorza
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
+import sys
+
+
+NUMBERS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+           'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
+           'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
+           'u', 'v', 'w', 'x', 'y', 'z']
+UNDEFINED = 31415
+
+
+class NumBaseError(Exception):
+    """
+    Raised when a number is not allowed with its base.
+    """
+
+    def __init__(self, *args, **kwargs):
+        Exception.__init__(self, *args, **kwargs)
+
+
+def nums_to_useable_from(num: str, bas: str):
+    """
+    It converts the num and bas variables from str to str and float,
+    plus also detects if the num is not an int.
+    """
+    num = str(num).lower()
+    bas = str(bas).replace(",", ".")
+
+    try:
+        if (("," in num) or
+            ("." in num)):
+            raise ValueError("Variable num have to be a positive integer!")
+
+        tmp = ""
+        for b in bas:
+            if (b in NUMBERS[:10]
+                or b == '.'):
+                tmp += b
+
+        if tmp != bas:
+            raise ValueError("Variable bas({0}) have to be".format(bas) +
+                             " a pozitive number between 1 and 36!")
+
+    except ValueError as ve:
+        print("VALUE ERROR:",
+              ve.args[0])
+        sys.exit()
+
+    return (num, float(bas))
+
+
+def nums_to_useable_to(num: str, bas: str):
+    """
+    It converts the num and bas variables from str to int,
+    plus also detects if the num is not an int.
+    """
+    num = str(num)
+    bas = str(bas).replace(",", ".")
+
+    try:
+        if (("," in num) or
+            ("." in num)):
+            raise ValueError("Variable num have to be a positive integer!")
+
+        tmp = ''
+        for b in bas:
+            if b in NUMBERS[:10]:
+                tmp += b
+        if tmp != bas:
+            raise ValueError("Variable bas({0}) have to be".format(bas) +
+                             " a pozitive number between 1 and 36!")
+
+    except ValueError as ve:
+        print("VALUE ERROR:",
+              ve.args[0])
+        sys.exit()
+
+    return (int(num), int(bas))
+
+
+def convert_from(num: str, frombase, out_type=int):
+    """
+    It converts a number (from base frombase) to base 10.
+    """
+
+    # I know, I know, this is ugly.
+    global NUMBERS
+
+    #tmp = nums_to_useable(num, frombase)
+    #num = tmp[0]
+    #frombase = tmp[1]
+    (num, frombase) = nums_to_useable_from(num, frombase)
+
+    try:
+        if frombase < 1.0:
+            raise ValueError("frombase", "greater than 1", frombase)
+        elif frombase > 36.0:
+            raise ValueError("frombase", "less than 36", frombase)
+
+        if not ((out_type is str)
+                or (out_type is float)):
+            if ((out_type is int) # if it'd be int, there'd be lost datas
+                and (frombase != int(frombase))):
+                raise ValueError("out_type",
+                                 "float or str, when the frombase is float",
+                                 str(out_type).split("'")[1])
+            elif out_type is not int: # in this case it's obvious that
+                                      # the frombase is int and the
+                                      # only other valid variation is
+                                      # int for out_type
+                raise ValueError("out_type",
+                                 "int, float or str",
+                                 str(out_type).split("'")[1])
+
+        # Get the current available numbers or handle the unary number system.
+        if frombase != 1:
+            currnums = NUMBERS[:int(frombase)]
+        else:
+            currnums = ['1']
+
+        # Check the number's validity.
+        for n in num:
+            if n not in currnums:
+                raise NumBaseError(num, frombase)
+
+    except ValueError as ve:
+        print("VALUE ERROR:",
+              "Variable {0}'s value have to be {1}!".format(ve.args[0],
+                                                            ve.args[1]),
+              "Current value is {0}.".format(ve.args[2]))
+        sys.exit()
+
+    except NumBaseError as nbe:
+        print("NUMBER BASE ERROR:",
+              nbe.args[0],
+              "is not valid a valid number",
+              "in base {0}!".format(int(nbe.args[1])))
+        sys.exit()
+
+    except Exception as e:
+        # Gotta catch 'em all!
+        print("UNKNOWN ERROR --", e.args[0])
+        sys.exit()
+
+    # RUFKM? If I'd rememberd to it, I should have not write all of these code.
+    #   Okay, some part of it can be good...
+    if ((frombase == int(frombase)) and
+        (frombase != 1.0)):
+        return int(num, int(frombase))
+
+    # Return this case before initialize the out variable
+    if frombase == 1:
+        return len(num)
+
+    out = 0
+
+    # Convert the letters to numbers.
+    if frombase > 10:
+        rnum = []
+        for n in num[::-1]:
+            rnum.append(NUMBERS.index(n))
+    else: # Or not.
+        rnum = num[::-1]
+
+    # And finally, the magical part.
+    for m in range(len(rnum)):
+        out += int(rnum[m]) * (frombase ** m)
+
+    return out_type(out)
+
+
+def convert_to(num: str, tobase) -> str:
+    """
+    It converts a number (in base 10) to base tobase.
+    """
+
+    # Yeah, I know, this is still ugly.
+    global NUMBERS
+
+    (num, tobase) = nums_to_useable_to(num, tobase)
+
+    try:
+        if tobase != int(tobase):
+            raise ValueError("tobase", "integer", tobase)
+
+        for n in str(num):
+            if n not in NUMBERS[:10]:
+                raise NumBaseError(num, tobase)
+
+    except ValueError as ve:
+        print("VALUE ERROR:",
+              "Variable {0}'s value have to be {1}!".format(ve.args[0],
+                                                            ve.args[1]),
+              "Current value is {0}.".format(ve.args[2]))
+        sys.exit()
+
+    except NumBaseError as nbe:
+        print("NUMBER BASE ERROR:",
+              nbe.args[0],
+              "is not valid a valid number",
+              "in base {0}!".format(int(nbe.args[1])))
+        sys.exit()
+
+    except Exception as e:
+        # Gotta catch 'em all!
+        print("UNKNOWN ERROR --", e.args[0])
+        sys.exit()
+
+    # If the needed base is the same as the current
+    # (or another, yet implemented one).
+    if tobase == 10.0:
+        return num
+    elif tobase == 16.0:
+        return str(hex(num))[2:]
+    elif tobase == 2.0:
+        return bin(num)[2:]
+    elif tobase == 8.0:
+        return oct(num)[2:]
+    elif tobase == 1.0:
+        return "1" * num
+
+    # Get the tobase's biggest index that is needed.
+    out = ""
+    maxidx = 0
+    curridx = 0
+    tmp = tobase ** curridx
+    while True:
+        maxidx = curridx
+        curridx += 1
+        tmp = tobase ** curridx
+        if tmp > num:
+            break
+
+    # Generate the final string via maxindex.
+    while maxidx >= 0:
+        tmp = tobase ** maxidx
+        out += str(NUMBERS[num // tmp])
+        num = num % tmp
+        maxidx -= 1
+
+    return out
+
+
+def convert_from_to(num: str, frombase, tobase, middle_type=int) -> str:
+    """
+    Easy-to-use function to use the main functions.
+
+    In the future, it will contains the "ultimate converter algorithm".
+    """
+    return convert_to(convert_from(num, frombase, middle_type), tobase)
+
+
+def write_results(num: str, fb: str, tb=UNDEFINED):
+    """
+    This function writes the result(s).
+    """
+    print("Number: {0}, Base: {1} will be".format(num, fb))
+    try:
+        if "." in fb:
+            raise ValueError("Base have to be integer!")
+    except ValueError as ve:
+        print(ve.args[0])
+    if tb != UNDEFINED:
+        print(convert_from_to(num, fb, tb, float), "in base {0}.".format(tb))
+    else:
+        import time
+        for b in range(1, 37):
+            print("Base {0:2}: {1}".format(b,
+                                           convert_from_to(num, fb, b)))
+            time.sleep(0.1)
+
+
+if __name__ == '__main__':
+    userhelp = """\
+Usage: {name} --help [--gui]
+       {name} N B [B2]
+
+Arguments:
+ --help Show this help and exit
+ --gui  GUI mode
+  N     Number to be converted
+  B     N's base
+ [B2]   The wanted number's base
+
+{project}  Copyright (C) {year}  {fullname}
+
+This program comes with ABSOLUTELY NO WARRANTY.
+This is free software, and you are welcome to redistribute it
+under certain conditions; for details, see the local copy of the GNU
+General Public License (LICENSE file along with this program) or online at
+<https://www.gnu.org/licenses/gpl.html>.
+""".format(
+    name="numconverter",
+    project="numconverter",
+    year="2016-2017",
+    fullname="B. Zolt'n Gorza")
+
+
+    if len(sys.argv) == 1:
+        print("See '{name} --help' for more "
+            + "compact use'".format(name="numconverter"), "\n"*2)
+        nnum = input("Number: ")
+        if not nnum:
+            print("ERROR - Undefined number!\n"
+                  "Please try again, but this time don't forget to type.")
+        else:
+            nbase = input("Frombase (2-36 or <enter> for 10): ") or "10"
+            nbase2 = input("Tobase (1-36 or <enter> "
+                           "for show all): ") or UNDEFINED
+            write_results(nnum, nbase, nbase2)
+        sys.exit()
+
+    elif ((len(sys.argv) == 2)
+          and (sys.argv[1] == "--help")):
+        print(userhelp)
+        sys.exit()
+
+    elif ((len(sys.argv) == 3)
+          and (sys.argv[1] == "--help")
+          and (sys.argv[2] == "--gui")):
+        import tkinter as tk
+        win = tk.Tk()
+        win.text = sys.argv[0]
+        label = tk.Label(win, text=userhelp, justify=tk.LEFT,
+                         font="monospace")
+        button = tk.Button(win, text="Exit", command=sys.exit)
+        label.grid(column=0, row=0)
+        button.grid(column=0, row=1)
+        win.mainloop()
+
+##    elif ((len(sys.argv) >= 2)
+##          and (len(sys.argv) < 5)
+##          and (sys.argv[1] == "--gui")):
+##        import tkinter as tk
+##        w = tk.Tk()
+##        L = tk.Label(w, text="number:")
+##        t = tk.Text()
+##        L2 = tk.Label(w, text="base:")
+##        L3 = tk.Label(w, text="new base:")
+##        L.grid(column=0, row=0)
+##        L2.grid(column=2, row=0)
+##        L3.grid(column=4, row=0)
+##        w.mainloop()
+
+    elif len(sys.argv) == 4:
+        write_results(sys.argv[1], sys.argv[2], sys.argv[3])
+    elif len(sys.argv) == 3:
+        write_results(sys.argv[1], sys.argv[2])
+
+    # ERROR
+    else:
+        pass
