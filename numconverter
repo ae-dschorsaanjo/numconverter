@@ -18,6 +18,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+
 import sys
 
 
@@ -26,6 +27,7 @@ NUMBERS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
            'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
            'u', 'v', 'w', 'x', 'y', 'z']
 UNDEFINED = 31415
+PROGNAME = 'numconverter'
 
 
 class NumBaseError(Exception):
@@ -48,7 +50,7 @@ def nums_to_useable_from(num: str, bas: str):
     try:
         if (("," in num) or
             ("." in num)):
-            raise ValueError("Variable num have to be a positive integer!")
+            raise ValueError("Variable 'num' have to be a positive integer!")
 
         tmp = ""
         for b in bas:
@@ -57,7 +59,7 @@ def nums_to_useable_from(num: str, bas: str):
                 tmp += b
 
         if tmp != bas:
-            raise ValueError("Variable bas({0}) have to be".format(bas) +
+            raise ValueError("Variable 'bas' ({0}) have to be".format(bas) +
                              " a pozitive number between 1 and 36!")
 
     except ValueError as ve:
@@ -79,14 +81,14 @@ def nums_to_useable_to(num: str, bas: str):
     try:
         if (("," in num) or
             ("." in num)):
-            raise ValueError("Variable num have to be a positive integer!")
+            raise ValueError("Variable 'num' have to be a positive integer!")
 
         tmp = ''
         for b in bas:
             if b in NUMBERS[:10]:
                 tmp += b
         if tmp != bas:
-            raise ValueError("Variable bas({0}) have to be".format(bas) +
+            raise ValueError("Variable 'bas' ({0}) have to be".format(bas) +
                              " a pozitive number between 1 and 36!")
 
     except ValueError as ve:
@@ -105,9 +107,6 @@ def convert_from(num: str, frombase, out_type=int):
     # I know, I know, this is ugly.
     global NUMBERS
 
-    #tmp = nums_to_useable(num, frombase)
-    #num = tmp[0]
-    #frombase = tmp[1]
     (num, frombase) = nums_to_useable_from(num, frombase)
 
     try:
@@ -118,7 +117,7 @@ def convert_from(num: str, frombase, out_type=int):
 
         if not ((out_type is str)
                 or (out_type is float)):
-            if ((out_type is int) # if it'd be int, there'd be lost datas
+            if ((out_type is int) # if it'd be int, there'd be lost data
                 and (frombase != int(frombase))):
                 raise ValueError("out_type",
                                  "float or str, when the frombase is float",
@@ -162,7 +161,9 @@ def convert_from(num: str, frombase, out_type=int):
         sys.exit()
 
     # RUFKM? If I'd rememberd to it, I should have not write all of these code.
-    #   Okay, some part of it can be good...
+    #   Okay, some part of it can be good....
+    # update (2017.apr.09): I know it's pointless to keep these comments,
+    #   but I kind of like them.
     if ((frombase == int(frombase)) and
         (frombase != 1.0)):
         return int(num, int(frombase))
@@ -177,7 +178,7 @@ def convert_from(num: str, frombase, out_type=int):
     if frombase > 10:
         rnum = []
         for n in num[::-1]:
-            rnum.append(NUMBERS.index(n))
+            rnum.append(NUMBERS[n])
     else: # Or not.
         rnum = num[::-1]
 
@@ -289,6 +290,31 @@ def write_results(num: str, fb: str, tb=UNDEFINED):
             time.sleep(0.1)
 
 
+def lazy_run():
+    print("See '{name} --help' for more "
+        + "compact use'".format(name=PROGNAME), "\n"*2)
+    nnum = input("Number: ")
+    if not nnum:
+        print("ERROR - Undefined number!\n"
+                "Please try again, but this time don't forget to type.")
+    else:
+        nbase = input("Frombase (2-36 or <enter> for 10): ") or "10"
+        nbase2 = input("Tobase (1-36 or <enter> "
+                        "for show all): ") or UNDEFINED
+        write_results(nnum, nbase, nbase2)
+
+
+def help_gui():
+    win = tk.Tk()
+    win.text = sys.argv[0]
+    label = tk.Label(win, text=userhelp, justify=tk.LEFT,
+                     font="monospace")
+    button = tk.Button(win, text="Exit", command=sys.exit)
+    label.grid(column=0, row=0)
+    button.grid(column=0, row=1)
+    win.mainloop()
+
+
 if __name__ == '__main__':
     userhelp = """\
 Usage: {name} --help [--gui]
@@ -302,51 +328,36 @@ Arguments:
  [B2]   The wanted number's base
 
 {project}  Copyright (C) {year}  {fullname}
-
 This program comes with ABSOLUTELY NO WARRANTY.
 This is free software, and you are welcome to redistribute it
 under certain conditions; for details, see the local copy of the GNU
 General Public License (LICENSE file along with this program) or online at
 <https://www.gnu.org/licenses/gpl.html>.
 """.format(
-    name="numconverter",
-    project="numconverter",
+    name=PROGNAME,
+    project=PROGNAME,
     year="2016-2017",
     fullname="B. Zolt'n Gorza")
 
+    if '--gui' in sys.argv:
+        import tkinter as tk
 
+    # standard run, no arguments
     if len(sys.argv) == 1:
-        print("See '{name} --help' for more "
-            + "compact use'".format(name="numconverter"), "\n"*2)
-        nnum = input("Number: ")
-        if not nnum:
-            print("ERROR - Undefined number!\n"
-                  "Please try again, but this time don't forget to type.")
-        else:
-            nbase = input("Frombase (2-36 or <enter> for 10): ") or "10"
-            nbase2 = input("Tobase (1-36 or <enter> "
-                           "for show all): ") or UNDEFINED
-            write_results(nnum, nbase, nbase2)
-        sys.exit()
+        lazy_run()
 
+    # help run
     elif ((len(sys.argv) == 2)
           and (sys.argv[1] == "--help")):
         print(userhelp)
-        sys.exit()
 
+    # help run with GUI (but frankly, what for?)
     elif ((len(sys.argv) == 3)
           and (sys.argv[1] == "--help")
           and (sys.argv[2] == "--gui")):
-        import tkinter as tk
-        win = tk.Tk()
-        win.text = sys.argv[0]
-        label = tk.Label(win, text=userhelp, justify=tk.LEFT,
-                         font="monospace")
-        button = tk.Button(win, text="Exit", command=sys.exit)
-        label.grid(column=0, row=0)
-        button.grid(column=0, row=1)
-        win.mainloop()
+          help_gui()
 
+    # GUI run
 ##    elif ((len(sys.argv) >= 2)
 ##          and (len(sys.argv) < 5)
 ##          and (sys.argv[1] == "--gui")):
@@ -361,11 +372,15 @@ General Public License (LICENSE file along with this program) or online at
 ##        L3.grid(column=4, row=0)
 ##        w.mainloop()
 
+    # standard run with number, frombase and tobase arguments
     elif len(sys.argv) == 4:
         write_results(sys.argv[1], sys.argv[2], sys.argv[3])
+
+    # standard run with number and frombase arguments
     elif len(sys.argv) == 3:
         write_results(sys.argv[1], sys.argv[2])
 
-    # ERROR
+    # ERROR -- unhandled input
     else:
-        pass
+        print(("Please use a valid way to run this program!\n"
+               "For more information, run '{pn} --help!'").format(pn=PROGNAME))
