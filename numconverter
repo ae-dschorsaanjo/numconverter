@@ -20,15 +20,25 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 import sys
+import tkinter as tk
 
 
 NUMBERS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
            'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
            'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
            'u', 'v', 'w', 'x', 'y', 'z']
+MAXBASE = len(NUMBERS)
+VALID_BASES = [b for b in range(1, 37)]
 UNDEFINED = 31415
 PROGNAME = 'numconverter'
-
+VERSION = '0.1'  # earlier versions didn't have version numbers
+HELPVARS = {
+    'project': PROGNAME,
+    'version': VERSION,
+    'year': "2016-2017",
+    'fullname': "B. Zolt'n Gorza",
+    'email': "gorza@freemail.hu"
+}
 
 class NumBaseError(Exception):
     """
@@ -161,7 +171,7 @@ def convert_from(num: str, frombase, out_type=int):
         sys.exit()
 
     # RUFKM? If I'd rememberd to it, I should have not write all of these code.
-    #   Okay, some part of it can be good....
+    #   Okay, some part of it can be good...
     # update (2017.apr.09): I know it's pointless to keep these comments,
     #   but I kind of like them.
     if ((frombase == int(frombase)) and
@@ -178,7 +188,7 @@ def convert_from(num: str, frombase, out_type=int):
     if frombase > 10:
         rnum = []
         for n in num[::-1]:
-            rnum.append(NUMBERS[n])
+            rnum.append(NUMBERS.index(n))
     else: # Or not.
         rnum = num[::-1]
 
@@ -237,7 +247,11 @@ def convert_to(num: str, tobase) -> str:
     elif tobase == 8.0:
         return oct(num)[2:]
     elif tobase == 1.0:
-        return "1" * num
+        try:
+            return "1" * num
+        except MemoryError:
+            print("I'm sorry, it seems like there was a little memory error.")
+            return "0"
 
     # Get the tobase's biggest index that is needed.
     out = ""
@@ -298,27 +312,220 @@ def lazy_run():
         print("ERROR - Undefined number!\n"
                 "Please try again, but this time don't forget to type.")
     else:
-        nbase = input("Frombase (2-36 or <enter> for 10): ") or "10"
+        nbase = input("Frombase (1-36 or <enter> for 10): ") or "10"
         nbase2 = input("Tobase (1-36 or <enter> "
                         "for show all): ") or UNDEFINED
         write_results(nnum, nbase, nbase2)
 
 
-def help_gui():
-    win = tk.Tk()
-    win.text = sys.argv[0]
-    label = tk.Label(win, text=userhelp, justify=tk.LEFT,
-                     font="monospace")
-    button = tk.Button(win, text="Exit", command=sys.exit)
-    label.grid(column=0, row=0)
-    button.grid(column=0, row=1)
-    win.mainloop()
+class HelpBox(tk.Frame):
+    def __init__(self, master, helptext):
+        super().__init__(master)
+        self.master.title("{name} v{version} help".format(name=PROGNAME,
+                                                          version=VERSION))
+        self.label = tk.Label(self.master, text=helptext, font='TkFixedFont',
+                              justify='left', wraplength=600)
+        self.button = tk.Button(self.master, text="Exit",
+                                command=self.master.destroy)
+        self.label.pack()
+        self.button.pack()
+        self.master.bind("<Escape>", lambda e: self.master.destroy())
+
+    @classmethod
+    def build(cls, text):
+        return cls(tk.Tk(), text)
+
+
+class NumConBox(tk.Frame):
+    def __init__(self, master, initin='', initib=16, initob=10, allset=False):
+        super().__init__(master)
+        self.master.title("{name} v{version}".format(name=PROGNAME,
+                                                     version=VERSION))
+        self.in_num = tk.StringVar(value=initin)
+        self.in_base = tk.StringVar(value=initib)
+        self.out_num = tk.StringVar()
+        self.out_base = tk.StringVar(value=initob)
+        self.err_text = tk.StringVar()
+        self.in_num.trace('w', lambda name, index, mode,
+                                      this_var=self.in_num:
+                                   self.num_callback(this_var))
+        self.in_base.trace('w', lambda name, index, mode, this="input base",
+                                       this_var=self.in_base:
+                                   self.base_callback(this, this_var, False))
+        self.out_base.trace('w', lambda name, index, mode, this="output base",
+                                       this_var=self.out_base:
+                                   self.base_callback(this, this_var, True))
+        self.grid()
+        self.build()
+        self.master.bind("<F4>", self.copy_result)
+        self.master.bind("<F1>", lambda e: self.helpme())
+        self.master.bind("<Escape>", lambda e: self.master.destroy())
+        if not allset:
+            self.message("The program's ready!")
+        else:
+            self.textout("Why do you even need the GUI, if "
+                         "you've got any variable?")
+            self.refresh()
+
+    def build(self):
+        self.innum = tk.Entry(self, width=12,
+                              textvariable=self.in_num, font='TkFixedFont')
+        self.L1 = tk.Label(self, text='_')
+        self.inbase = tk.Entry(self, width=3,
+                               textvariable=self.in_base, font='TkFixedFont')
+        self.L2 = tk.Label(self, text='=')
+        self.outnum = tk.Entry(self, width=12, state=tk.DISABLED,
+                               textvariable=self.out_num, font='TkFixedFont')
+        self.L3 = tk.Label(self, text='_')
+        self.outbase = tk.Entry(self, width=3,
+                                textvariable=self.out_base, font='TkFixedFont')
+        self.errtext = tk.Label(self, height=2, anchor='center',
+                                justify='center', wraplength=275,
+                                font='TkFixedFont', textvariable=self.err_text)
+        self.helpbutton = tk.Button(self, text='?',
+                                    command=self.helpme)
+        self.innum.grid(row=0, column=0, stick='ESN')
+        self.L1.grid(row=0, column=1)
+        self.inbase.grid(row=0, column=2, stick='WNS')
+        self.L2.grid(row=0, column=3, padx=10)
+        self.outnum.grid(row=0, column=4, stick='ESN')
+        self.L3.grid(row=0, column=5)
+        self.outbase.grid(row=0, column=6, stick='WNS')
+        self.helpbutton.grid(row=0, column=7, stick='NESW')
+        self.errtext.grid(row=1, column=0, columnspan=8, stick='NESW')
+        self.innum.focus_set()
+    
+    def copy_result(self, event):
+        self.master.clipboard_clear()
+        self.master.clipboard_append(self.out_num.get())
+        self.message("Result is copied into clipboard!")
+
+    def refresh(self):
+        """
+        It calls the calculator function(s) and refreshes the output number.
+        """
+        num = self.in_num.get()
+        ibase = self.in_base.get()
+        obase = self.out_base.get()
+        if (self.num_validator(num) and
+            self.base_validator(ibase, "input base", False) and
+            self.base_validator(obase, "output base", True)):
+            self.out_num.set(convert_from_to(num, ibase, obase, float))
+
+
+    def num_callback(self, this_var):
+        if self.num_validator(this_var.get()):
+            self.message("Number is set!")
+            self.refresh()
+
+    def base_callback(self, this, this_var, is_out: bool):
+        get = this_var.get()
+        if len(get) > 2:
+            this_var.set(get[:2])
+        if self.base_validator(get, this, is_out):
+            self.message(this.capitalize() + " is set!")
+            self.refresh()
+
+    def text_trim(self, text):
+        return str(text)[:78]
+
+    def message(self, text):
+        """Happy output."""
+        self.errtext['fg'] = 'green'
+        self.err_text.set(self.text_trim(text))
+
+    def textout(self, text):
+        """Normal text output."""
+        self.errtext['fg'] = 'black'
+        self.err_text.set(self.text_trim(text))
+
+    def error(self, text):
+        """Error output."""
+        self.errtext['fg'] = 'red'
+        self.err_text.set(self.text_trim(text))
+
+    def helpme(self, *args):
+        helptext = """\
+{project} v{version}  Copyright (C) {year}  {fullname} <{email}>
+This program comes with ABSOLUTELY NO WARRANTY.
+This is free software, and you are welcome to redistribute it \
+under certain conditions; for details, type '{project} --help'.
+
+
+How to use the GUI?
+-------------------
+
+You can define 3 variables in 3 boxes (or 'entries): the input number, the \
+input base and the output base. The 4th (or 3rd by order) entry is disabled; \
+you'll see there the result.
+In CLI this would look like "X_Y = A_B", where
+    X is the input number,
+    Y is the input base [1; 36],
+    A is the output number, and
+    B is the output base [1; 36].
+
+
+Keybindings
+-----------
+
+When you added all the 3 needed number, the result (output number) will be \
+calculated.
+
+If you hate to use the mouse when you're using a simple program like this, \
+you can avoid it with these simple keybindings (besides the usual working of \
+<Tab> and <Shift+Tab>):
+    <F1> for the 'help & about' (instead of the little button on the right),
+    <F4> for copying the result (instead of trying to memorize),
+    <Esc> for destroying (in other words: exiting the program).
+
+
+Post Scriptum
+-------------
+
+If you have any ideas, comments or bug report about this program, feel free \
+to write to me an e-mail at "{email}"!
+""".format(**HELPVARS)
+        hb = HelpBox.build(helptext)
+        hb.mainloop()
+
+    def num_validator(self, inp):
+        """Number validator function."""
+        for i in inp:
+            if i not in NUMBERS:
+                self.error("The number '{i}' is not valid!".format(i=i))
+                return False
+        return True
+        
+    def min_valid_base(self):
+        """This function detects the least valid base"""
+        tmp = ''.join(sorted(self.in_num.get()))
+        return NUMBERS.index(tmp[-1]) + 1
+
+    def base_validator(self, inp, base, is_out: bool):
+        """Number base validator."""
+        if not self.in_num.get(): # if there's no set number
+            self.textout("There's no set number.")
+            self.out_num.set('')
+            return False
+
+        minvb = self.min_valid_base()
+        try:
+            inp = int(inp)
+            if not is_out and not (inp >= minvb and inp <= MAXBASE):
+                    raise ValueError()
+        except ValueError as ve:
+            self.error(("The {name} have to be a valid base\n"
+                      + "(integer, {min} at least)").format(name=base,
+                                                            min=minvb))
+            return False
+        return True
 
 
 if __name__ == '__main__':
     userhelp = """\
-Usage: {name} --help [--gui]
-       {name} N B [B2]
+Usage: {project} --help [--gui]
+       {project} N B [B2]
+       {project} --gui [N [B [B2]]]
 
 Arguments:
  --help Show this help and exit
@@ -327,57 +534,47 @@ Arguments:
   B     N's base
  [B2]   The wanted number's base
 
-{project}  Copyright (C) {year}  {fullname}
+{project} v{version}  Copyright (C) {year}  {fullname} <{email}>
 This program comes with ABSOLUTELY NO WARRANTY.
 This is free software, and you are welcome to redistribute it
 under certain conditions; for details, see the local copy of the GNU
 General Public License (LICENSE file along with this program) or online at
 <https://www.gnu.org/licenses/gpl.html>.
-""".format(
-    name=PROGNAME,
-    project=PROGNAME,
-    year="2016-2017",
-    fullname="B. Zolt'n Gorza")
+""".format(**HELPVARS)
 
-    if '--gui' in sys.argv:
-        import tkinter as tk
+    argc = len(sys.argv)
+
+    if "--gui" in sys.argv:
+        root = tk.Tk()
 
     # standard run, no arguments
-    if len(sys.argv) == 1:
+    if argc == 1:
         lazy_run()
 
     # help run
-    elif ((len(sys.argv) == 2)
-          and (sys.argv[1] == "--help")):
+    elif (argc == 2 and
+          sys.argv[1] == "--help"):
         print(userhelp)
 
     # help run with GUI (but frankly, what for?)
-    elif ((len(sys.argv) == 3)
-          and (sys.argv[1] == "--help")
-          and (sys.argv[2] == "--gui")):
+    elif (argc == 3 and
+          sys.argv[1] == "--help" and
+          sys.argv[2] == "--gui"):
           help_gui()
 
     # GUI run
-##    elif ((len(sys.argv) >= 2)
-##          and (len(sys.argv) < 5)
-##          and (sys.argv[1] == "--gui")):
-##        import tkinter as tk
-##        w = tk.Tk()
-##        L = tk.Label(w, text="number:")
-##        t = tk.Text()
-##        L2 = tk.Label(w, text="base:")
-##        L3 = tk.Label(w, text="new base:")
-##        L.grid(column=0, row=0)
-##        L2.grid(column=2, row=0)
-##        L3.grid(column=4, row=0)
-##        w.mainloop()
+    elif (argc >= 2 and
+          argc <= 5 and
+          sys.argv[1] == "--gui"):
+        app = NumConBox(root, *sys.argv[2:], argc == 5)
+        app.mainloop()
 
     # standard run with number, frombase and tobase arguments
-    elif len(sys.argv) == 4:
+    elif argc == 4:
         write_results(sys.argv[1], sys.argv[2], sys.argv[3])
 
     # standard run with number and frombase arguments
-    elif len(sys.argv) == 3:
+    elif argc == 3:
         write_results(sys.argv[1], sys.argv[2])
 
     # ERROR -- unhandled input
