@@ -1,4 +1,16 @@
-11. apr. 2017
+v0.2 (8. may 2017)
+-----------
+
+- Added version numbering
+- Bugfix: When the program called with "--help --gui" arguments, it tried to
+  call a yet non-existent function
+- Minor formatting errors are fixed
+- Bug fixed, that caused too strict validation while you use GUI
+  (it accepted only lower case letters)... now it is converting the upper case
+  input to lower case which is not nice, but works fine
+
+
+v0.1 (-11. apr. 2017)
 -------------
 
 - Correct typo in readme
