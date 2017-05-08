@@ -31,7 +31,7 @@ MAXBASE = len(NUMBERS)
 VALID_BASES = [b for b in range(1, 37)]
 UNDEFINED = 31415
 PROGNAME = 'numconverter'
-VERSION = '0.1'  # earlier versions didn't have version numbers
+VERSION = '0.2'
 HELPVARS = {
     'project': PROGNAME,
     'version': VERSION,
@@ -174,6 +174,7 @@ def convert_from(num: str, frombase, out_type=int):
     #   Okay, some part of it can be good...
     # update (2017.apr.09): I know it's pointless to keep these comments,
     #   but I kind of like them.
+    # update (2017.may.08): I still do like 'em
     if ((frombase == int(frombase)) and
         (frombase != 1.0)):
         return int(num, int(frombase))
@@ -305,8 +306,8 @@ def write_results(num: str, fb: str, tb=UNDEFINED):
 
 
 def lazy_run():
-    print("See '{name} --help' for more "
-        + "compact use'".format(name=PROGNAME), "\n"*2)
+    print(("See '{name} --help' for more "
+           "compact use'").format(name=PROGNAME), "\n"*2)
     nnum = input("Number: ")
     if not nnum:
         print("ERROR - Undefined number!\n"
@@ -394,7 +395,7 @@ class NumConBox(tk.Frame):
         self.helpbutton.grid(row=0, column=7, stick='NESW')
         self.errtext.grid(row=1, column=0, columnspan=8, stick='NESW')
         self.innum.focus_set()
-    
+
     def copy_result(self, event):
         self.master.clipboard_clear()
         self.master.clipboard_append(self.out_num.get())
@@ -414,6 +415,7 @@ class NumConBox(tk.Frame):
 
 
     def num_callback(self, this_var):
+        this_var.set(this_var.get().lower())
         if self.num_validator(this_var.get()):
             self.message("Number is set!")
             self.refresh()
@@ -444,7 +446,7 @@ class NumConBox(tk.Frame):
         self.errtext['fg'] = 'red'
         self.err_text.set(self.text_trim(text))
 
-    def helpme(self, *args):
+    def helpme(self):
         helptext = """\
 {project} v{version}  Copyright (C) {year}  {fullname} <{email}>
 This program comes with ABSOLUTELY NO WARRANTY.
@@ -495,7 +497,7 @@ to write to me an e-mail at "{email}"!
                 self.error("The number '{i}' is not valid!".format(i=i))
                 return False
         return True
-        
+
     def min_valid_base(self):
         """This function detects the least valid base"""
         tmp = ''.join(sorted(self.in_num.get()))
@@ -512,7 +514,7 @@ to write to me an e-mail at "{email}"!
         try:
             inp = int(inp)
             if not is_out and not (inp >= minvb and inp <= MAXBASE):
-                    raise ValueError()
+                raise ValueError()
         except ValueError as ve:
             self.error(("The {name} have to be a valid base\n"
                       + "(integer, {min} at least)").format(name=base,
@@ -560,7 +562,9 @@ General Public License (LICENSE file along with this program) or online at
     elif (argc == 3 and
           sys.argv[1] == "--help" and
           sys.argv[2] == "--gui"):
-          help_gui()
+        app = NumConBox(root)
+        app.helpme()
+        app.mainloop()
 
     # GUI run
     elif (argc >= 2 and
